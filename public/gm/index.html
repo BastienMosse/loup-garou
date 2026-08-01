@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loup-Garou — Maître du Jeu</title>
+<link rel="stylesheet" href="/shared.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap wide" id="app">
+  <div class="eyebrow">Maître du jeu</div>
+  <h1 id="title">🐺 Loup-Garou</h1>
+
+  <div id="lobbyView" class="panel">
+    <p style="opacity:0.8">Crée une partie, puis affiche le code aux joueurs pour qu'ils rejoignent depuis leur téléphone.</p>
+    <button id="createBtn">Créer une partie</button>
+  </div>
+
+  <div id="waitingView" class="panel" style="display:none">
+    <div class="eyebrow">Code de la partie</div>
+    <div class="code-display" id="roomCodeDisplay"></div>
+    <p style="text-align:center;opacity:0.7;font-size:0.9rem">Les joueurs vont sur cette appli, choisissent "Rejoindre" et entrent ce code.</p>
+    <h3 style="margin-top:20px">Joueurs (<span id="playerCount">0</span>)</h3>
+    <ul class="player-list" id="lobbyPlayerList"></ul>
+    <div id="configZone" style="margin-top:16px">
+      <div style="margin-bottom:14px">
+        <div style="margin-bottom:8px">Nombre de loups-garous</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button type="button" class="stepper-btn" id="wolvesMinus">−</button>
+          <input type="number" id="wolvesCount" min="1" value="1" readonly>
+          <button type="button" class="stepper-btn" id="wolvesPlus">+</button>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <input type="checkbox" id="includeSeer" checked style="width:18px;height:18px"> Inclure la Voyante
+      </label>
+      <div class="error-msg" id="startError" style="display:none"></div>
+      <button id="startBtn">Lancer la partie</button>
+    </div>
+  </div>
+
+  <div id="gameView" style="display:none">
+    <div class="panel">
+      <div class="eyebrow">Phase actuelle</div>
+      <div id="phaseLabel" style="font-size:1.3rem;font-weight:700;margin-bottom:14px"></div>
+      <div class="btn-row">
+        <button class="ghost" data-phase="night-wolves">🌙 Nuit — Loups</button>
+        <button class="ghost" data-phase="night-seer">🔮 Nuit — Voyante</button>
+        <button class="ghost" data-phase="day-discussion">☀️ Jour — Débat</button>
+        <button class="ghost" data-phase="day-vote">🗳️ Jour — Vote</button>
+      </div>
+    </div>
+
+    <div class="panel" id="actionZone"></div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Rôles &amp; état</h3>
+      <ul class="player-list" id="rosterList"></ul>
+    </div>
+  </div>
+
+  <div id="overView" style="display:none"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

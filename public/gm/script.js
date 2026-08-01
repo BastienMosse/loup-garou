@@ -1,0 +1,132 @@
+const socket = io();
+let roomCode = null;
+let players = [];
+let lastWolfVotes = {};
+let lastDayVotes = {};
+let lastSeerCheck = null;
+
+const $ = id => document.getElementById(id);
+
+$('createBtn').onclick = () => {
+  socket.emit('gm:createRoom', (res) => {
+    roomCode = res.roomCode;
+    $('lobbyView').style.display = 'none';
+    $('waitingView').style.display = 'block';
+    $('roomCodeDisplay').textContent = roomCode;
+  });
+};
+
+socket.on('gm:state', (state) => {
+  players = state.players;
+  renderLobby();
+  renderRoster();
+});
+
+function renderLobby() {
+  $('playerCount').textContent = players.length;
+  $('lobbyPlayerList').innerHTML = players.map(p => `<li><span>${p.name}</span></li>`).join('');
+  const maxWolves = Math.max(1, Math.floor((players.length - 1) / 2));
+  $('wolvesCount').max = maxWolves;
+  if (parseInt($('wolvesCount').value, 10) > maxWolves) $('wolvesCount').value = maxWolves;
+}
+
+$('wolvesMinus').onclick = () => {
+  const el = $('wolvesCount');
+  el.value = Math.max(parseInt(el.min, 10), parseInt(el.value, 10) - 1);
+};
+$('wolvesPlus').onclick = () => {
+  const el = $('wolvesCount');
+  el.value = Math.min(parseInt(el.max, 10) || 1, parseInt(el.value, 10) + 1);
+};
+
+$('startBtn').onclick = () => {
+  const wolvesCount = parseInt($('wolvesCount').value, 10);
+  const includeSeer = $('includeSeer').checked;
+  socket.emit('gm:startGame', { roomCode, wolvesCount, includeSeer }, (res) => {
+    if (res.error) {
+      $('startError').textContent = res.error;
+      $('startError').style.display = 'block';
+      return;
+    }
+    $('waitingView').style.display = 'none';
+    $('gameView').style.display = 'block';
+  });
+};
+
+document.querySelectorAll('[data-phase]').forEach(btn => {
+  btn.onclick = () => socket.emit('gm:setPhase', { roomCode, phase: btn.dataset.phase });
+});
+
+socket.on('game:phase', ({ phase }) => {
+  const labels = {
+    'night-wolves': '🌙 Nuit — les loups choisissent',
+    'night-seer': '🔮 Nuit — la voyante observe',
+    'day-discussion': '☀️ Jour — le village débat',
+    'day-vote': '🗳️ Jour — vote du village',
+  };
+  $('phaseLabel').textContent = labels[phase] || phase;
+  document.querySelectorAll('[data-phase]').forEach(b => b.style.background = b.dataset.phase === phase ? 'var(--forest)' : 'transparent');
+  lastWolfVotes = {}; lastDayVotes = {}; lastSeerCheck = null;
+  renderAction(phase);
+});
+
+socket.on('gm:wolfVotes', (tally) => { lastWolfVotes = tally; renderAction('night-wolves'); });
+socket.on('gm:dayVotes', (tally) => { lastDayVotes = tally; renderAction('day-vote'); });
+socket.on('gm:seerChecked', (data) => { lastSeerCheck = data; renderAction('night-seer'); });
+
+function renderAction(phase) {
+  const zone = $('actionZone');
+  const alive = players.filter(p => p.alive);
+  if (phase === 'night-wolves') {
+    zone.innerHTML = `<h3 style="margin-top:0">Votes des loups</h3>${tallyHTML(lastWolfVotes)}
+      <div style="margin-top:14px">
+        <select id="elimSelect">${alive.filter(p=>p.role!=='Loup-Garou').map(p=>`<option value="${p.name}">${p.name}</option>`).join('')}</select>
+        <button class="danger" id="confirmElim">Confirmer la victime des loups</button>
+      </div>`;
+    $('confirmElim').onclick = () => {
+      const targetName = $('elimSelect').value;
+      socket.emit('gm:eliminate', { roomCode, targetName, cause: 'loups' });
+    };
+  } else if (phase === 'night-seer') {
+    zone.innerHTML = `<h3 style="margin-top:0">Vision de la voyante</h3>` +
+      (lastSeerCheck ? `<p>${lastSeerCheck.seer} a observé <strong>${lastSeerCheck.target}</strong> → <span class="tag">${lastSeerCheck.role}</span></p>` : `<p style="opacity:0.6">En attente de la voyante...</p>`);
+  } else if (phase === 'day-vote') {
+    zone.innerHTML = `<h3 style="margin-top:0">Votes du village</h3>${tallyHTML(lastDayVotes)}
+      <div style="margin-top:14px">
+        <select id="elimSelect">${alive.map(p=>`<option value="${p.name}">${p.name}</option>`).join('')}</select>
+        <button class="danger" id="confirmElim">Éliminer ce joueur</button>
+      </div>`;
+    $('confirmElim').onclick = () => {
+      const targetName = $('elimSelect').value;
+      socket.emit('gm:eliminate', { roomCode, targetName, cause: 'vote' });
+    };
+  } else {
+    zone.innerHTML = `<p style="opacity:0.6;margin:0">Le village discute à voix haute — aucune action numérique nécessaire.</p>`;
+  }
+}
+
+function tallyHTML(tally) {
+  const entries = Object.entries(tally);
+  if (!entries.length) return `<p style="opacity:0.6;margin:0">Aucun vote pour l'instant.</p>`;
+  return `<div class="tally">${entries.map(([name, count]) => `<div class="tally-row"><span>${name}</span><span>${count}</span></div>`).join('')}</div>`;
+}
+
+function renderRoster() {
+  $('rosterList').innerHTML = players.map(p => {
+    const tagClass = p.role === 'Loup-Garou' ? 'wolf' : (p.role === 'Voyante' ? 'seer' : '');
+    const connIcon = (p.alive && !p.connected) ? ' 🔌' : '';
+    return `<li class="${p.alive ? '' : 'dead'}"><span>${p.name}${connIcon}</span><span class="tag ${tagClass}">${p.role || '?'}</span></li>`;
+  }).join('');
+}
+
+socket.on('game:over', ({ winner, roster }) => {
+  players = roster;
+  renderRoster();
+  $('gameView').querySelector('.btn-row').style.display = 'none';
+  const zone = $('actionZone');
+  const isWolves = winner === 'loups';
+  zone.innerHTML = `<div class="winner-banner ${isWolves ? 'wolves' : 'village'}">
+    <div class="moon">${isWolves ? '🐺' : '🕊️'}</div>
+    <h2>${isWolves ? 'Les Loups-Garous gagnent !' : 'Le Village gagne !'}</h2>
+  </div>`;
+});

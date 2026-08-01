@@ -1,0 +1,6 @@
+/* Styles spécifiques à l'écran Joueur.
+   Les tokens de couleur, boutons, cartes, etc. viennent de /shared.css */
+
+.role-card .role-name {
+  color: var(--gold);
+}

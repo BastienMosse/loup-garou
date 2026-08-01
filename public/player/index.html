@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loup-Garou — Joueur</title>
+<link rel="stylesheet" href="/shared.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="eyebrow">Joueur</div>
+  <h1>🐺 Loup-Garou</h1>
+
+  <div id="reconnectView" class="center-msg" style="display:none">
+    <span class="moon">🔄</span>
+    Reconnexion à la partie...
+  </div>
+
+  <div id="joinView" class="panel" style="display:none">
+    <input type="text" id="codeInput" placeholder="Code de la partie (ex: WXYZ)" maxlength="4" style="text-transform:uppercase">
+    <input type="text" id="nameInput" placeholder="Ton prénom" maxlength="20">
+    <div class="error-msg" id="joinError" style="display:none"></div>
+    <button id="joinBtn">Rejoindre la partie</button>
+  </div>
+
+  <div id="waitView" class="center-msg" style="display:none">
+    <span class="moon">⏳</span>
+    En attente que le Maître du Jeu lance la partie...
+    <div style="margin-top:24px"><button class="ghost" id="leaveBtnWait">Quitter la partie</button></div>
+  </div>
+
+  <div id="roleView" style="display:none"></div>
+
+  <div id="actionView" style="display:none"></div>
+
+  <div id="deadView" class="center-msg" style="display:none">
+    <span class="moon">💀</span>
+    <div id="deadText"></div>
+  </div>
+
+  <div id="overView" style="display:none"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

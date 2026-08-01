@@ -1,0 +1,6 @@
+/* Styles spécifiques à l'écran du Maître du Jeu.
+   Les tokens de couleur, boutons, cartes, etc. viennent de /shared.css */
+
+#phaseLabel {
+  color: var(--gold);
+}
