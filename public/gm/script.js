@@ -9,6 +9,7 @@ let currentConfig = { includeWitch: false };
 let pendingWolfVictim = null;
 let pendingHunter = null;
 let maxWolvesAllowed = 1;
+let wolvesCount = 1;
 
 const $ = id => document.getElementById(id);
 
@@ -36,21 +37,20 @@ function renderLobby() {
   $('lobbyPlayerList').innerHTML = players.map(p => `<li><span>${p.name}</span></li>`).join('');
   // Aligné sur la validation serveur : wolvesCount doit être < players.length.
   maxWolvesAllowed = Math.max(1, players.length - 1);
-  $('wolvesCount').max = maxWolvesAllowed;
-  if (parseInt($('wolvesCount').value, 10) > maxWolvesAllowed) $('wolvesCount').value = maxWolvesAllowed;
+  if (wolvesCount > maxWolvesAllowed) wolvesCount = maxWolvesAllowed;
+  $('wolvesCount').textContent = wolvesCount;
 }
 
 $('wolvesMinus').onclick = () => {
-  const el = $('wolvesCount');
-  el.value = Math.max(1, parseInt(el.value, 10) - 1);
+  wolvesCount = Math.max(1, wolvesCount - 1);
+  $('wolvesCount').textContent = wolvesCount;
 };
 $('wolvesPlus').onclick = () => {
-  const el = $('wolvesCount');
-  el.value = Math.min(maxWolvesAllowed, parseInt(el.value, 10) + 1);
+  wolvesCount = Math.min(maxWolvesAllowed, wolvesCount + 1);
+  $('wolvesCount').textContent = wolvesCount;
 };
 
 $('startBtn').onclick = () => {
-  const wolvesCount = parseInt($('wolvesCount').value, 10);
   const includeSeer = $('includeSeer').checked;
   const includeWitch = $('includeWitch').checked;
   const includeLittleGirl = $('includeLittleGirl').checked;
