@@ -35,6 +35,15 @@
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <input type="checkbox" id="includeSeer" checked style="width:18px;height:18px"> Inclure la Voyante
       </label>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <input type="checkbox" id="includeWitch" style="width:18px;height:18px"> Inclure la Sorcière
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <input type="checkbox" id="includeLittleGirl" style="width:18px;height:18px"> Inclure la Petite Fille
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <input type="checkbox" id="includeHunter" style="width:18px;height:18px"> Inclure le Chasseur
+      </label>
       <div class="error-msg" id="startError" style="display:none"></div>
       <button id="startBtn">Lancer la partie</button>
     </div>
@@ -46,6 +55,7 @@
       <div id="phaseLabel" style="font-size:1.3rem;font-weight:700;margin-bottom:14px"></div>
       <div class="btn-row">
         <button class="ghost" data-phase="night-wolves">🌙 Nuit — Loups</button>
+        <button class="ghost" data-phase="night-witch" id="witchPhaseBtn" style="display:none">🧪 Nuit — Sorcière</button>
         <button class="ghost" data-phase="night-seer">🔮 Nuit — Voyante</button>
         <button class="ghost" data-phase="day-discussion">☀️ Jour — Débat</button>
         <button class="ghost" data-phase="day-vote">🗳️ Jour — Vote</button>

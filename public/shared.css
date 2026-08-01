@@ -184,6 +184,9 @@ button.ghost {
 }
 .tag.wolf { background: rgba(193,18,31,0.2); color: #ff6b6b; border-color: rgba(193,18,31,0.5); }
 .tag.seer { background: rgba(88,129,87,0.25); color: #9fd39f; border-color: rgba(88,129,87,0.5); }
+.tag.witch { background: rgba(147,51,193,0.2); color: #c993f0; border-color: rgba(147,51,193,0.5); }
+.tag.littlegirl { background: rgba(212,162,76,0.2); color: var(--gold); border-color: rgba(212,162,76,0.4); }
+.tag.hunter { background: rgba(76,120,212,0.2); color: #93b4f0; border-color: rgba(76,120,212,0.5); }
 
 .role-card {
   text-align: center;

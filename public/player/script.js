@@ -76,11 +76,15 @@ socket.io.on('reconnect', () => {
 const ROLE_INFO = {
   'Loup-Garou': { icon: '🐺', desc: 'Chaque nuit, choisis une victime avec les autres loups. Le jour, fais profil bas et mens si nécessaire.' },
   'Voyante': { icon: '🔮', desc: 'Chaque nuit, tu peux observer secrètement le rôle d\'un autre joueur.' },
+  'Sorcière': { icon: '🧪', desc: 'Tu as deux potions à usage unique : une pour sauver la victime des loups, une pour empoisonner quelqu\'un.' },
+  'Petite Fille': { icon: '👧', desc: 'Chaque nuit, tu peux espionner discrètement les votes des loups. Ne te fais pas repérer !' },
+  'Chasseur': { icon: '🏹', desc: 'Si tu es éliminé, tu peux immédiatement abattre une dernière personne.' },
   'Villageois': { icon: '🧑\u200d🌾', desc: 'Tu n\'as pas de pouvoir spécial. Observe, débats et vote pour démasquer les loups.' },
 };
 
 const PHASE_WAIT_MSG = {
   'night-wolves': '🌙 Les loups choisissent leur victime. Ferme les yeux et attends.',
+  'night-witch': '🧪 La sorcière prépare ses potions.',
   'night-seer': '🔮 La voyante observe en silence.',
   'day-discussion': '☀️ C\'est l\'heure du débat ! Discutez à voix haute avec les autres joueurs.',
   'day-vote': '🗳️ Vote en cours...',
@@ -88,12 +92,21 @@ const PHASE_WAIT_MSG = {
 
 // Reçu à chaque changement de phase ET juste après une reconnexion :
 // reconstruit tout l'écran du joueur à partir de l'état serveur (source unique de vérité).
-socket.on('player:sync', ({ role, alive: isAlive, phase, wolfTeam, targets }) => {
+socket.on('player:sync', ({ role, alive: isAlive, phase, wolfTeam, mode, targets, extra }) => {
   myRole = role;
   alive = isAlive;
   $('reconnectView').style.display = 'none';
   $('joinView').style.display = 'none';
   $('waitView').style.display = 'none';
+
+  // Le Chasseur tire même après sa mort, avant l'écran "éliminé".
+  if (mode === 'hunter-shot') {
+    $('roleView').style.display = 'none';
+    $('deadView').style.display = 'none';
+    $('actionView').style.display = 'block';
+    renderTargetGrid('🏹 Tu es éliminé — choisis une dernière cible', targets, (id) => socket.emit('hunter:shoot', { roomCode, target: id }));
+    return;
+  }
 
   if (!alive) { showDeadWaiting(); return; }
 
@@ -108,7 +121,11 @@ socket.on('player:sync', ({ role, alive: isAlive, phase, wolfTeam, targets }) =>
   $('actionView').style.display = 'block';
   $('deadView').style.display = 'none';
 
-  if (targets) {
+  if (mode === 'peek') {
+    renderLittleGirlPeek(extra);
+  } else if (mode === 'witch') {
+    renderWitchAction(extra, targets);
+  } else if (targets) {
     const titles = {
       'night-wolves': 'Choisissez la victime de cette nuit',
       'night-seer': 'Observe un joueur',
@@ -120,6 +137,64 @@ socket.on('player:sync', ({ role, alive: isAlive, phase, wolfTeam, targets }) =>
     showWaitingForPhase(PHASE_WAIT_MSG[phase]);
   }
 });
+
+function renderLittleGirlPeek(extra) {
+  const tally = (extra && extra.tally) || {};
+  const entries = Object.entries(tally);
+  const rows = entries.length
+    ? entries.map(([name, count]) => `<div class="tally-row"><span>${name}</span><span>${count}</span></div>`).join('')
+    : `<p style="opacity:0.6;margin:0">Aucun vote pour l'instant...</p>`;
+  $('actionView').innerHTML = `<div class="panel">
+    <h3 style="margin-top:0">👧 Tu espionnes les loups...</h3>
+    <p style="opacity:0.7;font-size:0.85rem;margin-top:0">Reste discrète, ne fais aucun bruit.</p>
+    <div class="tally">${rows}</div>
+  </div>`;
+}
+
+function renderWitchAction(extra, targets) {
+  const victim = extra && extra.victim;
+  const canHeal = extra && extra.canHeal && victim;
+  const canPoison = extra && extra.canPoison;
+  const zone = $('actionView');
+
+  let html = `<div class="panel"><h3 style="margin-top:0">🧪 Tes potions</h3>`;
+  html += victim
+    ? `<p>Cette nuit, les loups ont désigné <strong>${victim}</strong>.</p>`
+    : `<p style="opacity:0.7">Les loups n'ont pas encore désigné de victime.</p>`;
+
+  if (canHeal) {
+    html += `<button id="witchHealBtn" style="margin-top:8px">Sauver ${victim}</button>`;
+  } else if (!(extra && extra.canHeal)) {
+    html += `<p style="opacity:0.5;font-size:0.85rem">Potion de vie déjà utilisée.</p>`;
+  }
+
+  if (canPoison) {
+    html += `<div style="margin-top:14px"><p style="margin:0 0 8px">Empoisonner quelqu'un :</p>
+      <div class="target-grid" id="witchPoisonGrid">${targets.map(t => `<button data-id="${t.id}">${t.name}</button>`).join('')}</div></div>`;
+  } else {
+    html += `<p style="opacity:0.5;font-size:0.85rem;margin-top:10px">Potion de poison déjà utilisée.</p>`;
+  }
+  html += `<p id="witchConfirmMsg" style="opacity:0.7;font-size:0.85rem;margin-top:10px"></p></div>`;
+  zone.innerHTML = html;
+
+  if (canHeal) {
+    $('witchHealBtn').onclick = () => {
+      socket.emit('witch:action', { roomCode, type: 'heal' });
+      $('witchConfirmMsg').textContent = `✓ Tu as sauvé ${victim}.`;
+      $('witchHealBtn').disabled = true;
+    };
+  }
+  if (canPoison) {
+    document.querySelectorAll('#witchPoisonGrid button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('#witchPoisonGrid button').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        socket.emit('witch:action', { roomCode, type: 'poison', target: btn.dataset.id });
+        $('witchConfirmMsg').textContent = `✓ Tu as empoisonné ${btn.textContent}.`;
+      };
+    });
+  }
+}
 
 function showWaitingForPhase(msg) {
   $('actionView').innerHTML = `<div class="center-msg">${msg || 'En attente du Maître du Jeu...'}</div>`;
