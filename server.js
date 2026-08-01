@@ -160,7 +160,10 @@ function syncPlayer(room, player) {
     payload.targets = alivePlayers(room).filter(p => p.name !== player.name).map(p => ({ id: p.name, name: p.name }));
   } else if (room.phase === 'night-seer' && player.role === 'Voyante') {
     payload.mode = 'seer-check';
-    payload.targets = alivePlayers(room).filter(p => p.name !== player.name).map(p => ({ id: p.name, name: p.name }));
+    payload.extra = { used: room.seerUsedThisNight };
+    if (!room.seerUsedThisNight) {
+      payload.targets = alivePlayers(room).filter(p => p.name !== player.name).map(p => ({ id: p.name, name: p.name }));
+    }
   } else if (room.phase === 'day-vote') {
     payload.mode = 'day-vote';
     payload.targets = alivePlayers(room).filter(p => p.name !== player.name).map(p => ({ id: p.name, name: p.name }));
@@ -186,6 +189,7 @@ io.on('connection', (socket) => {
       witchSavedVictim: false,
       witchAction: null,
       pendingHunter: null,
+      seerUsedThisNight: false,
     };
     socket.join(roomCode);
     socket.data.roomCode = roomCode;
@@ -222,6 +226,7 @@ io.on('connection', (socket) => {
     room.witchSavedVictim = false;
     room.witchAction = null;
     room.pendingHunter = null;
+    room.seerUsedThisNight = false;
 
     for (const p of players) syncPlayer(room, p);
     io.to(room.gmSocketId).emit('gm:state', gmSnapshot(room, roomCode));
@@ -242,6 +247,7 @@ io.on('connection', (socket) => {
       room.pendingWitchVictim = null;
       room.witchSavedVictim = false;
       room.witchAction = null;
+      room.seerUsedThisNight = false;
     }
     if (phase === 'day-vote') room.dayVotes = {};
 
@@ -323,9 +329,12 @@ io.on('connection', (socket) => {
     if (!room || room.phase !== 'night-seer') return;
     const seer = room.players[socket.data.playerName];
     if (!seer || seer.role !== 'Voyante' || !seer.alive) return;
+    if (room.seerUsedThisNight) return; // une seule vision par nuit
     const t = room.players[target];
     if (!t) return;
+    room.seerUsedThisNight = true;
     socket.emit('seer:result', { name: t.name, role: t.role });
+    syncPlayer(room, seer); // verrouille la grille côté client (used: true)
     io.to(room.gmSocketId).emit('gm:seerChecked', { seer: seer.name, target: t.name, role: t.role });
   });
 

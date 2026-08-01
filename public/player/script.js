@@ -125,6 +125,8 @@ socket.on('player:sync', ({ role, alive: isAlive, phase, wolfTeam, mode, targets
     renderLittleGirlPeek(extra);
   } else if (mode === 'witch') {
     renderWitchAction(extra, targets);
+  } else if (mode === 'seer-check' && extra && extra.used) {
+    showWaitingForPhase('🔮 Tu as déjà utilisé ta vision cette nuit.');
   } else if (targets) {
     const titles = {
       'night-wolves': 'Choisissez la victime de cette nuit',
